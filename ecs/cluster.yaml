@@ -207,59 +207,61 @@ Parameters:
 Mappings:
   RegionMap:
     'ap-south-2':
-      ECSAMI: 'ami-090a99c11f5073c73'
+      ECSAMI: 'ami-0d9e5454c28d0b61b'
     'ap-south-1':
-      ECSAMI: 'ami-0728433edfacabeeb'
+      ECSAMI: 'ami-03e75332ffeeb512f'
     'eu-south-1':
-      ECSAMI: 'ami-0d852af404b4c688e'
+      ECSAMI: 'ami-0a209ebeb0b56bf98'
     'eu-south-2':
-      ECSAMI: 'ami-0540e3f3cd3e0556b'
+      ECSAMI: 'ami-0fab6c6e1f92f8997'
     'me-central-1':
-      ECSAMI: 'ami-0627ac9496dbc1d58'
+      ECSAMI: 'ami-0b6e5ab663e48d7f0'
+    'il-central-1':
+      ECSAMI: 'ami-0ca0a2c6a9ec9ef0a'
     'ca-central-1':
-      ECSAMI: 'ami-0844bfc4148241d58'
+      ECSAMI: 'ami-04c4755874f196c5b'
     'eu-central-1':
-      ECSAMI: 'ami-09822cbc47b3c1ce2'
+      ECSAMI: 'ami-031ef26e74b8f374c'
     'eu-central-2':
-      ECSAMI: 'ami-0bfcf1b2add1a2a82'
+      ECSAMI: 'ami-01a7882eaf4658b70'
     'us-west-1':
-      ECSAMI: 'ami-0de23ce0365cb8ac2'
+      ECSAMI: 'ami-020e3784a4501250b'
     'us-west-2':
-      ECSAMI: 'ami-0f9d51af8f7bd2135'
+      ECSAMI: 'ami-080b1e312f29aebbb'
     'af-south-1':
-      ECSAMI: 'ami-0101569be8c8a66bb'
+      ECSAMI: 'ami-01088f23e721619df'
     'eu-north-1':
-      ECSAMI: 'ami-00a804218c720a58d'
+      ECSAMI: 'ami-086b83333c1316350'
     'eu-west-3':
-      ECSAMI: 'ami-0dc8a5b98034eb6ae'
+      ECSAMI: 'ami-073deb7e91cdf45d8'
     'eu-west-2':
-      ECSAMI: 'ami-08bf6d5e3a39b36ae'
+      ECSAMI: 'ami-0614d874e5d653441'
     'eu-west-1':
-      ECSAMI: 'ami-01c6d3733d0803993'
+      ECSAMI: 'ami-0d6c27a1bb3f71e9e'
     'ap-northeast-3':
-      ECSAMI: 'ami-0151ed6db2957c7df'
+      ECSAMI: 'ami-0092b0bb450a91100'
     'ap-northeast-2':
-      ECSAMI: 'ami-02902330f629f7d79'
+      ECSAMI: 'ami-0d77b2fba3628df46'
     'me-south-1':
-      ECSAMI: 'ami-0c1268a020fc7b58b'
+      ECSAMI: 'ami-0bb2397da081b40ad'
     'ap-northeast-1':
-      ECSAMI: 'ami-0031a745da0bb1445'
+      ECSAMI: 'ami-01d514398745616a7'
     'sa-east-1':
-      ECSAMI: 'ami-0de5edb525dcf403a'
+      ECSAMI: 'ami-0c7896e35be2c7c07'
     'ap-east-1':
-      ECSAMI: 'ami-0e749bd7b5f65a077'
+      ECSAMI: 'ami-0be1891b40fbd5e94'
     'ap-southeast-1':
-      ECSAMI: 'ami-0a1409bf94faa559f'
+      ECSAMI: 'ami-062a3e3b74bb5b4c5'
     'ap-southeast-2':
-      ECSAMI: 'ami-04de619f62ed50f60'
+      ECSAMI: 'ami-0775ca431543b2151'
     'ap-southeast-3':
-      ECSAMI: 'ami-0ffc7d6bb5bb49a9f'
+      ECSAMI: 'ami-0f8d56e80803463d8'
     'ap-southeast-4':
-      ECSAMI: 'ami-092bd0247aa04c1c5'
+      ECSAMI: 'ami-09569e92116d16a0e'
     'us-east-1':
-      ECSAMI: 'ami-090310a05d8eae025'
+      ECSAMI: 'ami-0fec9863172e50c93'
     'us-east-2':
-      ECSAMI: 'ami-02fd619ee86a2a3d8'
+      ECSAMI: 'ami-05383c67c111ecf57'
 Conditions:
   HasPermissionsBoundary: !Not [!Equals [!Ref PermissionsBoundary, '']]
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
@@ -1236,26 +1238,27 @@ Resources:
       Code:
         ZipFile: !Sub |
           'use strict';
-          const AWS = require('aws-sdk');
-          const ecs = new AWS.ECS({apiVersion: '2014-11-13'});
-          const cloudwatch = new AWS.CloudWatch({apiVersion: '2010-08-01'});
+          const { ECSClient, ListContainerInstancesCommand, DescribeContainerInstancesCommand } = require("@aws-sdk/client-ecs");
+          const ecs = new ECSClient({apiVersion: '2014-11-13'});
+          const { CloudWatchClient, PutMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
+          const cloudwatch = new CloudWatchClient({apiVersion: '2010-08-01'});
           const CONTAINER_MAX_CPU = ${ContainerMaxCPU};
           const CONTAINER_MAX_MEMORY = ${ContainerMaxMemory};
           const CLUSTER = '${Cluster}';
           const NAMESPACE = '${AWS::StackName}';
           function list(nextToken) {
-            return ecs.listContainerInstances({
+            return ecs.send(new ListContainerInstancesCommand({
               cluster: CLUSTER,
               maxResults: 1,
               nextToken: nextToken,
               status: 'ACTIVE'
-            }).promise();
+            }));
           }
           function describe(containerInstanceArns) {
-            return ecs.describeContainerInstances({
+            return ecs.send(new DescribeContainerInstancesCommand({
               cluster: CLUSTER,
               containerInstances: containerInstanceArns
-            }).promise();
+            }));
           }
           function compute(totalSchedulableContainers, nextToken) {
             return list(nextToken)
@@ -1283,7 +1286,7 @@ Resources:
             compute(0, undefined)
               .then((schedulableContainers) => {
                 console.log(`schedulableContainers: ${!schedulableContainers}`);
-                return cloudwatch.putMetricData({
+                return cloudwatch.send(new PutMetricDataCommand({
                   MetricData: [{
                     MetricName: 'SchedulableContainers',
                     Dimensions: [{
@@ -1294,7 +1297,7 @@ Resources:
                     Unit: 'Count'
                   }],
                   Namespace: NAMESPACE
-                }).promise();
+                }));
               })
               .then(() => cb())
               .catch(cb);
@@ -1302,7 +1305,7 @@ Resources:
       Handler: 'index.handler'
       MemorySize: 128
       Role: !GetAtt 'SchedulableContainersLambdaRole.Arn'
-      Runtime: 'nodejs16.x'
+      Runtime: 'nodejs18.x'
       Timeout: 60
   SchedulableContainersLogGroup:
     Type: 'AWS::Logs::LogGroup'
@@ -1413,21 +1416,23 @@ Resources:
       Code:
         ZipFile: |
           'use strict';
-          const AWS = require('aws-sdk');
-          const ecs = new AWS.ECS({apiVersion: '2014-11-13'});
-          const sqs = new AWS.SQS({apiVersion: '2012-11-05'});
-          const asg = new AWS.AutoScaling({apiVersion: '2011-01-01'});
+          const { ECSClient, ListContainerInstancesCommand, UpdateContainerInstancesStateCommand, ListTasksCommand } = require("@aws-sdk/client-ecs");
+          const ecs = new ECSClient({apiVersion: '2014-11-13'});
+          const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+          const sqs = new SQSClient({apiVersion: '2012-11-05'});
+          const { AutoScalingClient, CompleteLifecycleActionCommand, RecordLifecycleActionHeartbeatCommand } = require("@aws-sdk/client-auto-scaling");
+          const asg = new AutoScalingClient({apiVersion: '2011-01-01'});
           const cluster = process.env.CLUSTER;
           const queueUrl = process.env.QUEUE_URL;
           const drainingTimeout = process.env.DRAINING_TIMEOUT;
           async function getContainerInstanceArn(ec2InstanceId) {
             console.log(`getContainerInstanceArn(${[...arguments].join(', ')})`);
-            const listResult = await ecs.listContainerInstances({cluster: cluster, filter: `ec2InstanceId == '${ec2InstanceId}'`}).promise();
+            const listResult = await ecs.send(new ListContainerInstancesCommand({cluster: cluster, filter: `ec2InstanceId == '${ec2InstanceId}'`}));
             return listResult.containerInstanceArns[0];
           }
           async function drainInstance(ciArn) {
             console.log(`drainInstance(${[...arguments].join(', ')})`);
-            await ecs.updateContainerInstancesState({cluster: cluster, containerInstances: [ciArn], status: 'DRAINING'}).promise();
+            await ecs.send(new UpdateContainerInstancesStateCommand({cluster: cluster, containerInstances: [ciArn], status: 'DRAINING'}));
           }
           async function wait(ciArn, asgName, lchName, lcaToken, terminateTime) {
             console.log(`wait(${[...arguments].join(', ')})`);
@@ -1440,33 +1445,33 @@ Resources:
               LifecycleActionToken: lcaToken,
               TerminateTime: terminateTime
             };
-            await sqs.sendMessage({
+            await sqs.send(new SendMessageCommand({
               QueueUrl: queueUrl,
               DelaySeconds: 60,
               MessageBody: JSON.stringify(payload)
-            }).promise();
+            }));
           }
           async function countTasks(ciArn) {
             console.log(`countTasks(${[...arguments].join(', ')})`);
-            const listResult = await ecs.listTasks({cluster: cluster, containerInstance: ciArn}).promise();
+            const listResult = await ecs.send(new ListTasksCommand({cluster: cluster, containerInstance: ciArn}));
             return listResult.taskArns.length;
           }
           async function terminateInstance(asgName, lchName, lcaToken) {
             console.log(`terminateInstance(${[...arguments].join(', ')})`);
-            await asg.completeLifecycleAction({
+            await asg.send(new CompleteLifecycleActionCommand({
               AutoScalingGroupName: asgName,
               LifecycleHookName: lchName,
               LifecycleActionToken: lcaToken,
               LifecycleActionResult: 'CONTINUE'
-            }).promise();
+            }));
           }
           async function heartbeat(asgName, lchName, lcaToken) {
             console.log(`heartbeat(${[...arguments].join(', ')})`);
-            await asg.recordLifecycleActionHeartbeat({
+            await asg.send(new RecordLifecycleActionHeartbeatCommand({
               AutoScalingGroupName: asgName,
               LifecycleHookName: lchName,
               LifecycleActionToken: lcaToken
-            }).promise();
+            }));
           }
           exports.handler = async function(event, context) {
             console.log(`Invoke: ${JSON.stringify(event)}`);
@@ -1499,7 +1504,7 @@ Resources:
       Handler: 'index.handler'
       MemorySize: 128
       Role: !GetAtt 'DrainInstanceLambdaRole.Arn'
-      Runtime: 'nodejs16.x'
+      Runtime: 'nodejs18.x'
       Timeout: 30
       Environment:
         Variables:
